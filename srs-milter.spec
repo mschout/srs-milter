@@ -36,8 +36,6 @@ socket to communicate with the Postfix MTA.
 
 %prep
 %setup -q
-sed -i -e   's|srs-filter|srs-milter|g;' \
-        srs-milter.init
 
 %build
 #export SENDMAIL=/usr/sbin/sendmail
@@ -52,7 +50,6 @@ sed -i -e   's|srs-filter|srs-milter|g;' \
 %{__install} -d -m0750 %{buildroot}%{_localstatedir}/run/srs-milter
 %{__install} -d -m0750 %{buildroot}%{_localstatedir}/run/srs-milter/postfix
 %{__install} -D -m0755 src/srs-filter %{buildroot}%{_sbindir}/srs-milter
-#%{__strip} %{buildroot}%{_sbindir}/srs-milter
 
 %pre
 /usr/bin/getent group srs-milt >/dev/null || /usr/sbin/groupadd -r srs-milt
@@ -74,12 +71,6 @@ fi
 
 %postun
 %{_initrddir}/srs-milter condrestart &>/dev/null || :
-
-#%post postfix
-# This is needed because the milter needs to "give away" the MTA communication
-# socket to the postfix group, and it needs to be a member of the group to do
-# that.
-#/usr/sbin/usermod -a -G postfix srs-milt || :
 
 %clean
 %{__rm} -rf %{buildroot}
