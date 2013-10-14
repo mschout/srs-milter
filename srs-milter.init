@@ -19,7 +19,7 @@ source /etc/sysconfig/network
 [ -x /usr/sbin/srs-milter ] || exit 1
 
 ### Default variables
-USER="srs-milt"
+USER="srs-milter"
 SOCKET="inet:10040@localhost"
 FORWARD=
 REVERSE=

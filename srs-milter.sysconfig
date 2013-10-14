@@ -1,6 +1,6 @@
 # Default values
 #
-#USER="srs-milt"
+#USER="srs-milter"
 #SOCKET="inet:10040@localhost"
 #FORWARD=
 #REVERSE=

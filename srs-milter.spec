@@ -1,63 +1,48 @@
 Summary:        Milter (mail filter) for SRS
 Name:           srs-milter
-Version:        0.0.1
-Release:        2
+Version:        0.0.2
+Release:        1%{?dist}
 License:        GPL
 Group:          System Environment/Daemons
-URL:            http://kmlinux.fjfi.cvut.cz/~vokacpet/activities/srs-milter
-Source0:        http://kmlinux.fjfi.cvut.cz/~vokacpet/activities/srs-milter/%{name}-%{version}.tar.gz
+URL:            https://github.com/flowerysong/srs-milter
+Source0:        https://github.com/flowerysong/srs-milter/archive/%{name}-%{version}.tar.gz
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildRequires:  sendmail-devel
-Requires:       /usr/sbin/sendmail
+BuildRequires:  libspf2-devel
+BuildRequires:  libsrs2-devel
+Requires:   libspf2
+Requires:   libsrs2
 
-Requires(pre):  /usr/bin/getent, /usr/sbin/groupadd, /usr/sbin/useradd, /usr/sbin/usermod
-Requires(post): /sbin/chkconfig
-Requires(post): /sbin/service
-Requires(preun): /sbin/chkconfig, initscripts
-Requires(postun): initscripts
+Requires(pre):      /usr/bin/getent, /usr/sbin/groupadd, /usr/sbin/useradd, /usr/sbin/usermod
+Requires(post):     /sbin/chkconfig
+Requires(post):     /sbin/service
+Requires(preun):    /sbin/chkconfig, initscripts
+Requires(postun):   initscripts
 
 %description
 The srs-milter package is an implementation of the SRS standard
 that tries to fix problems caused by SPF in case of forwarded mail
 
-%package postfix
-Summary:        Postfix support for srs-milter
-Group:          System Environment/Daemons
-Requires:       %{name} = %{version}-%{release}
-Requires(pre):  postfix
-Requires(post): shadow-utils, %{name} = %{version}-%{release}
-%if 0%{?fedora} > 9 || 0%{?rhel} > 5
-BuildArch:      noarch
-%endif
-
-%description postfix
-This package adds support for running srs-milter using a Unix-domain
-socket to communicate with the Postfix MTA.
-
 %prep
 %setup -q
 
 %build
-#export SENDMAIL=/usr/sbin/sendmail
-%{__make} %{?_smp_mflags} -C src
+make %{?_smp_mflags} -C src
 
 %install
-%{__rm} -rf %{buildroot}
-
-%{__install} -D -m0755 srs-milter.init %{buildroot}%{_initrddir}/srs-milter
-%{__install} -D -m0644 srs-milter.sysconfig %{buildroot}%{_sysconfdir}/sysconfig/srs-milter
-%{__install} -d -m0755 %{buildroot}%{_localstatedir}/lib/srs-milter
-%{__install} -d -m0750 %{buildroot}%{_localstatedir}/run/srs-milter
-%{__install} -d -m0750 %{buildroot}%{_localstatedir}/run/srs-milter/postfix
-%{__install} -D -m0755 src/srs-filter %{buildroot}%{_sbindir}/srs-milter
+make DESTDIR=%{buildroot} install
+install -D -m0755 srs-milter.init %{buildroot}%{_initrddir}/srs-milter
+install -D -m0644 srs-milter.sysconfig %{buildroot}%{_sysconfdir}/sysconfig/srs-milter
+install -d -m0755 %{buildroot}%{_localstatedir}/lib/srs-milter
+install -D -m0755 src/srs-filter %{buildroot}%{_sbindir}/srs-milter
 
 %pre
-/usr/bin/getent group srs-milt >/dev/null || /usr/sbin/groupadd -r srs-milt
-/usr/bin/getent passwd srs-milt >/dev/null || \
-        /usr/sbin/useradd -r -g srs-milt -d %{_localstatedir}/lib/srs-milter \
-        -s /sbin/nologin -c "SRS Milter" srs-milt
+/usr/bin/getent group srs-milter >/dev/null || /usr/sbin/groupadd -r srs-milter
+/usr/bin/getent passwd srs-milter >/dev/null || \
+        /usr/sbin/useradd -r -g srs-milter -d %{_localstatedir}/lib/srs-milter \
+        -s /sbin/nologin -c "SRS Milter" srs-milter
 # Fix homedir for upgrades
-/usr/sbin/usermod --home %{_localstatedir}/lib/srs-milter srs-milt &>/dev/null
+/usr/sbin/usermod --home %{_localstatedir}/lib/srs-milter srs-milter &>/dev/null
 exit 0
 
 %post
@@ -81,12 +66,7 @@ fi
 %config(noreplace) %{_sysconfdir}/sysconfig/srs-milter
 %{_initrddir}/srs-milter
 %{_sbindir}/srs-milter
-%dir %attr(-,srs-milt,srs-milt) %{_localstatedir}/lib/srs-milter
-%dir %attr(-,srs-milt,srs-milt) %{_localstatedir}/run/srs-milter
-
-%files postfix
-%defattr(-,root,root,-)
-%dir %attr(-,sa-milt,postfix) %{_localstatedir}/run/srs-milter/postfix/
+%dir %attr(-,srs-milter,srs-milter) %{_localstatedir}/lib/srs-milter
 
 %changelog
 * Tue May 22 2012 Eric Searcy <eric@linuxfoundation.org> - 0.0.1-2
