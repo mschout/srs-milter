@@ -1,4 +1,4 @@
-BINDIR =	/usr/sbin
+SBINDIR =	/usr/sbin
 MANDIR =	/usr/man/man8
 DEFINES =	
 INCDIRS =	
@@ -19,7 +19,8 @@ srs-milter.o:	srs-milter.c
 
 
 install:		all
-	$(INSTALL) -c srs-milter $(BINDIR)/srs-milter
+	@mkdir -p ${DESTDIR}${SBINDIR}
+	${INSTALL} -m 0755 -c srs-milter ${DESTDIR}${SBINDIR}/
 
 clean:
 	rm -f srs-milter *.o a.out core
