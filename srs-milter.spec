@@ -24,17 +24,16 @@ The srs-milter package is an implementation of the SRS standard
 that tries to fix problems caused by SPF in case of forwarded mail
 
 %prep
-%setup -q
+%setup -q -n %{name}-%{name}-%{version}
 
 %build
 make %{?_smp_mflags} -C src
 
 %install
-make DESTDIR=%{buildroot} install
+make DESTDIR=%{buildroot} install -C src
 install -D -m0755 srs-milter.init %{buildroot}%{_initrddir}/srs-milter
 install -D -m0644 srs-milter.sysconfig %{buildroot}%{_sysconfdir}/sysconfig/srs-milter
 install -d -m0755 %{buildroot}%{_localstatedir}/lib/srs-milter
-install -D -m0755 src/srs-filter %{buildroot}%{_sbindir}/srs-milter
 
 %pre
 /usr/bin/getent group srs-milter >/dev/null || /usr/sbin/groupadd -r srs-milter
@@ -69,9 +68,5 @@ fi
 %dir %attr(-,srs-milter,srs-milter) %{_localstatedir}/lib/srs-milter
 
 %changelog
-* Tue May 22 2012 Eric Searcy <eric@linuxfoundation.org> - 0.0.1-2
-- Add postfix package
-- Change service daemon from "filter" to "milter"
-
-* Mon Jul  4 2011 Petr Vokac <vokac@kmlinux.fjfi.cvut.cz> - 0.0.1-1
-- Initial package.
+* %(date "+%a %b %d %Y") (Automated RPM build) - %{version}-%{release}
+- See git log for actual changes.
