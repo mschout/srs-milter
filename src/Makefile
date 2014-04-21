@@ -1,8 +1,8 @@
 SBINDIR =	/usr/sbin
 MANDIR =	/usr/man/man8
 DEFINES =	
-INCDIRS =	
-LIBDIRS =	
+INCDIRS =	-I/usr/local/include
+LIBDIRS =	-L/usr/local/lib
 CFLAGS =	-Wall $(DEFINES) $(INCDIRS)
 LDFLAGS =	-g3 $(LIBDIRS)
 INSTALL =	/usr/bin/install
