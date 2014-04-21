@@ -39,6 +39,7 @@ static int CONFIG_verbose = 0;
 static int CONFIG_forward = 0;
 static int CONFIG_reverse = 0;
 static char *CONFIG_socket = NULL;
+static char *CONFIG_pidfile = NULL;
 static char **CONFIG_domains = NULL;
 static int CONFIG_spf_check = 0;
 static char *CONFIG_spf_heloname = NULL;
@@ -75,6 +76,7 @@ struct srs_milter_thread_data {
 static void handle_secrets_arg(char *arg);
 static void read_secret_file(const char *path);
 static void add_config_secret(char *secret);
+static void write_pidfile();
 static char *strtrim(char *s);
 
 int is_local_addr(const char *addr) {
@@ -636,6 +638,9 @@ void daemonize() {
     exit(EXIT_SUCCESS);
   }
 
+  /* save new PID to PID file */
+  write_pidfile();
+
   /* Change the file mode mask */
   umask(0);
 
@@ -719,7 +724,6 @@ int main(int argc, char* argv[]) {
   int c, i;
   int debug_flag = 0;
   char *address = NULL;
-  FILE *f;
 
   while (1) {
     static struct option long_options[] = {
@@ -785,9 +789,8 @@ int main(int argc, char* argv[]) {
         break;
 
       case 'P':
-        f = fopen(optarg, "w");
-        fprintf(f, "%i", (int) getpid());
-        fclose(f);
+        CONFIG_pidfile = optarg;
+        write_pidfile();
         break;
 
       case 's':
@@ -1084,7 +1087,32 @@ int main(int argc, char* argv[]) {
 
   closelog();
 
+  if (CONFIG_pidfile != NULL)
+      unlink(CONFIG_pidfile);
+
   exit(EXIT_SUCCESS);
+}
+
+static void write_pidfile()
+{
+    if (CONFIG_pidfile == NULL)
+        return;
+
+    FILE *f = fopen(CONFIG_pidfile, "w");
+    if (!f) {
+        fprintf(stderr, "ERROR: Failed to open pid file %s: %s\n", CONFIG_pidfile, strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+
+    // we re-write the PID file after forking in daemon mode, so we must truncate
+    if (ftruncate(fileno(f), 0) != 0) {
+        fprintf(stderr, "ERROR: Failed to truncate pid file %s: %s\n", CONFIG_pidfile, strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+
+    fprintf(f, "%i", (int) getpid());
+
+    fclose(f);
 }
 
 // add a secret to the CONFIG_srs_secrets array, extending if necessary
