@@ -72,6 +72,10 @@ struct srs_milter_thread_data {
 };
 
 
+static void handle_secrets_arg(char *arg);
+static void read_secret_file(const char *path);
+static void add_config_secret(char *secret);
+static char *strtrim(char *s);
 
 int is_local_addr(const char *addr) {
   int i, r;
@@ -692,7 +696,7 @@ void usage(char *argv0) {
   printf("  -o, --srs-domain\n");
   printf("      our SRS domain name\n");
   printf("  -c, --srs-secret\n");
-  printf("      secret string for SRS hashing algorithm\n");
+  printf("      secret string or filename containing strings for SRS hashing algorithm\n");
   printf("  -w, --srs-alwaysrewrite\n");
   printf("  -g, --srs-hashlength\n");
   printf("  -i, --srs-hashmin\n");
@@ -826,15 +830,7 @@ int main(int argc, char* argv[]) {
         break;
 
       case 'c':
-        i = 0;
-        if (!CONFIG_srs_secrets) {
-          CONFIG_srs_secrets = (char **) malloc((i+2)*sizeof(char *));
-        } else {
-          while (CONFIG_srs_secrets[i]) i++;
-          CONFIG_srs_secrets = (char **) realloc(CONFIG_srs_secrets, (i+2)*sizeof(char *));
-        }
-        CONFIG_srs_secrets[i] = optarg;
-        CONFIG_srs_secrets[i+1] = NULL;
+        handle_secrets_arg(optarg);
         break;
 
       case 'l':
@@ -1089,4 +1085,77 @@ int main(int argc, char* argv[]) {
   closelog();
 
   exit(EXIT_SUCCESS);
+}
+
+// add a secret to the CONFIG_srs_secrets array, extending if necessary
+static void add_config_secret(char *secret)
+{
+  int i = 0;
+
+  if (!CONFIG_srs_secrets) {
+    CONFIG_srs_secrets = (char **) malloc((i+2)*sizeof(char *));
+  }
+  else {
+    while (CONFIG_srs_secrets[i]) i++;
+    CONFIG_srs_secrets = (char **) realloc(CONFIG_srs_secrets, (i+2)*sizeof(char *));
+  }
+
+  CONFIG_srs_secrets[i] = secret;
+  CONFIG_srs_secrets[i+1] = NULL;
+}
+
+// process the srs-secret arg
+static void handle_secrets_arg(char *arg)
+{
+  if (access(arg, F_OK) != -1)
+    read_secret_file(arg);
+  else
+    add_config_secret(arg);
+}
+
+// trim leading/trailing spaces from a string
+// returns pointer to first non-blank char
+static char *strtrim(char *s)
+{
+  size_t len = strlen(s);
+
+  /* trim right side */
+  while (len > 1 && isspace(s[len - 1]))
+    s[--len] = '\0';
+
+  /* trim left side */
+  while (isspace((unsigned char )*s))
+      s++;
+
+  return s;
+}
+
+// read secrets from a file
+static void read_secret_file(const char *path)
+{
+  char buf[BUFSIZ];
+  FILE *f;
+
+  f = fopen(path, "r");
+  if (!f) {
+    syslog(LOG_ERR, "%s: failed to open secrets file: %s",
+      SRS_MILTER_NAME, strerror(errno));
+    exit(EXIT_FAILURE);
+  }
+
+  while (fgets(buf, sizeof(buf), f)) {
+    int n = strlen(buf);
+
+    if (n == sizeof(buf) - 1 && buf[n - 1] != '\n') {
+      syslog(LOG_ERR, "%s: line too long", SRS_MILTER_NAME);
+      exit(EXIT_FAILURE);
+    }
+
+    char *secret = strtrim(buf);
+    if (strlen(secret) > 0) {
+      add_config_secret(strtrim(buf));
+    }
+  }
+
+  fclose(f);
 }
